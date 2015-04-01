@@ -51,12 +51,27 @@ HEX_LOOP:
 
 	jmp COMPARE_HEX
 DONE_COMPARE_HEX:
+	cmp dl,'0'
+	jne ACTUALLY_WRITE
+ZERO_CHECK:
+	cmp ecx,LC1
+	je NEXT_HEX_CHAR
+ACTUALLY_WRITE:
 	mov byte [ecx], dl
+	
 	inc ecx
 
+NEXT_HEX_CHAR:
 	shl eax,4
 	jmp HEX_LOOP
 FINISHED_CONVERT:
+
+	cmp ecx,LC1
+	jne GOT_NUM
+	mov byte [ecx], '0'
+	inc ecx
+	
+GOT_NUM:
 	mov byte [ecx], 0
 	
 
