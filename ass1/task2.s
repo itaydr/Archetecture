@@ -32,8 +32,6 @@ calc_func:
 	
 	; ecx is legal, do calculation..
 	mov eax, 0
-	cmp ecx,0
-	je PRINT_ECX
 	
 	mov ebx, ecx
 	mov eax, 1
@@ -49,19 +47,8 @@ GO1_LOOP:
 	jmp GO1_LOOP
 GO1_DONE:
 	
-	mov edx, eax
-	shr edx, 16
-	and eax, 0x0000FFFF
-	
+	mov edx,0
 	div ecx
-	
-	
-	
-	
-	; TODO... the calculation
-
-
-PRINT_ECX:
 	
 	push	eax		; Call printf with 2 arguments: pointer to str
 	push	LC0		; and pointer to format string.
