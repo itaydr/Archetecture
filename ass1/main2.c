@@ -6,7 +6,7 @@ int check(int x);
 
 int check(int x)
 {
-	if ((x < 0) || ( x > 31 )) {
+	if ((x <= 0) || ( x > 31 )) {
 		return 0;
 	} else {
 		return 1;
