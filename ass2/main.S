@@ -11,6 +11,9 @@ I:	DB	0, 10, 0
 IS_VALID_NUM: DB 0, 10, 0
 LAST_STRUCT: DB 0
 FIRST_STRUCT: DB 0
+BASEP: DB 0
+STACKP: DB 0
+SZ: DB 20 ; 4 bytes for 5 slots
 
 section .text
 	align 32
@@ -20,12 +23,22 @@ section .text
 	extern gets 
 
 main:
+	; Allocate stack and save base pointer to it in BASEP
+	mov eax, 0
+	mov eax, [SZ]
+	push eax
+	call malloc
+	add esp,4
+	mov [BASEP], eax
+
+read:
 	; Read num
 	push LC0
 	call gets
 	add esp, 4
 	mov dword [I], 0
 	mov dword [IS_VALID_NUM], 0
+
 parseLoop:
 	; Handle first of 2 chars
 	mov byte [IS_VALID_NUM], 0
@@ -123,7 +136,20 @@ afterConnectPreviousStruct:
 	add dword [I], 2 ; 2 because we parse 2 byts at a loop
 	jmp parseLoop
 parseLoopEnd:
+	
+	; save num in stack
+	mov eax, 0
+	mov eax, [STACKP]
+	add eax, BASEP
+	mov ebx, 0
+	mov ebx, [FIRST_STRUCT]
+	mov [eax], ebx
 
+	;Increment stack pointer
+	add byte [STACKP], 4
+	mov dword[FIRST_STRUCT], 0
+
+	jmp read
 
 
 errorBadNumber:
