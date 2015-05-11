@@ -2,13 +2,13 @@ section .bss
 
 section	.data
 LC0:
-	DB	"blaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 10, 0	; Format string
+	DB	"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", 100, 0	; Format string
 LC1:
 	DB "", 10, 0
 PLUS_CARRY_FLAG:	DB	0
 PLUS_CONTINUE_FLAG:	DB	0
-I:	DB	0
-IS_VALID_NUM: DB 0
+I:	DB	0, 10, 0
+IS_VALID_NUM: DB 0, 10, 0
 LAST_STRUCT: DB 0
 FIRST_STRUCT: DB 0
 
@@ -24,12 +24,13 @@ main:
 	push LC0
 	call gets
 	add esp, 4
-
+	mov dword [I], 0
+	mov dword [IS_VALID_NUM], 0
 parseLoop:
 	; Handle first of 2 chars
 	mov byte [IS_VALID_NUM], 0
 	mov eax, 0
-	add eax, [I]
+	add al, [I]
 	add eax ,LC0													;; We have an error here on the second loop. Probably bad address.
 	mov bl, [eax]
 	cmp bl, 0
@@ -67,7 +68,10 @@ notUpper:
 
 parseSecondByte:
 	; Handle second of two chars.
-	mov bl, [LC0 + 1]
+	mov eax, 1
+	add al, [I]
+	add eax ,LC0													;; We have an error here on the second loop. Probably bad address.
+	mov bl, [eax]
 
 ;check digit
 	cmp bl, '0'     ; handle 0-9
@@ -116,7 +120,7 @@ afterConnectPreviousStruct:
 
 	mov dword [LAST_STRUCT], eax ; save this struct for next loop.
 
-	add byte [I], 1
+	add dword [I], 2 ; 2 because we parse 2 byts at a loop
 	jmp parseLoop
 parseLoopEnd:
 
