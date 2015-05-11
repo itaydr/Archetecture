@@ -9,5 +9,14 @@ gcc -s -O3 main2.o task2.o -o task2
 
 
 
-nasm -fwin32 --PREFIX _ plus.s -o plus.o
-gcc -s -O3 plus.o -o plus
+nasm -fwin32 -O0 -g --PREFIX _ plus.s -o plus.o
+gcc -s -O0 -c debugPrintNumber.c -o debugPrintNumber.o
+gcc -s -g -O0 debugPrintNumber.o plus.o -o plus
+
+
+nasm -fwin32 -O0 -g --PREFIX _ duplicate_op_asaf.s -o duplicate_op_asaf.o
+gcc -s -g -O0 duplicate_op_asaf.o -o duplicate_op_asaf
+
+
+nasm -fwin32 -O0 -g --PREFIX _ compare_and_cal_2_power_y_asaf.s -o compare_and_cal_2_power_y_asaf.o
+gcc -s -g -O0 compare_and_cal_2_power_y_asaf.o -o compare_and_cal_2_power_y_asaf
