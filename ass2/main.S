@@ -12,13 +12,13 @@ CRASH_STRING:
 
 PLUS_CARRY_FLAG:	DB	0
 PLUS_CONTINUE_FLAG:	DB	0
-I:	DB	0, 10, 0
-IS_VALID_NUM: DB 0, 10, 0
-LAST_STRUCT: DB 0
-FIRST_STRUCT: DB 0
-BASEP: DB 0
-STACKP: DB 0
-SZ: DB 20 ; 4 bytes for 5 slots
+I:	DD	0, 10, 0
+IS_VALID_NUM: DD 0, 10, 0
+LAST_STRUCT: DD 0
+FIRST_STRUCT: DD 0
+BASEP: DD 0
+STACKP: DD 0
+SZ: DD 20 ; 4 bytes for 5 slots
 
 section .text
 	align 32
@@ -32,7 +32,7 @@ section .text
 main:
 	; Allocate stack and save base pointer to it in BASEP
 	mov eax, 0
-	mov eax, [SZ]
+	mov al, [SZ]
 	push eax
 	call malloc
 	add esp,4
@@ -52,7 +52,7 @@ parseLoop:
 	mov eax, 0
 	add al, [I]
 	add eax ,LC0													;; We have an error here on the second loop. Probably bad address.
-	mov bl, [eax]a
+	mov bl, [eax]
 	cmp bl, 0
 	jz parseLoopEnd
 
@@ -66,19 +66,23 @@ parseLoop:
 	cmp bl, '+'
 	jnz not_plus
 	; pop 1
-	mov eax, 0
-	mov al, [STACKP]
-	dec al
-	mov [STACKP], al
-	add eax, BASEP
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
 	push eax
 
 	; pop 2
-	mov eax, 0
-	mov al, [STACKP]
-	dec al
-	mov [STACKP], al
-	add eax, BASEP
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
 	push eax
 
 	call plus
@@ -148,17 +152,18 @@ notUpper_2:
 	; Save a pointer for the first struct.
 	cmp dword [FIRST_STRUCT], 0
 	jnz dontSaveFirst
-	mov dword [FIRST_STRUCT], eax
+	mov [FIRST_STRUCT], eax
 dontSaveFirst:
-
+											;;;;;;;;;;;;;;;;;;;;;;;;;;; Not connecting last struct properly. We shoud connect the last struct to the new one, and not vice versa.
 	; Save our byte 
 	mov bl, [LC1]
 	mov byte [eax], bl
-
+	mov dword [eax + 1], 0 ;
 	; If this is not the first loop - we have a previous struct, and we want to connect it to the new one.
 	cmp dword [LAST_STRUCT], 0
 	jz afterConnectPreviousStruct 
-	mov dword [LAST_STRUCT + 1], eax ; connect the last struct to the new one.
+	mov ecx, [LAST_STRUCT]
+	mov dword [eax + 1], ecx ; connect the last struct to the new one.
 afterConnectPreviousStruct:
 
 	mov dword [LAST_STRUCT], eax ; save this struct for next loop.
@@ -169,17 +174,18 @@ parseLoopEnd:
 	
 	; save num in stack
 	mov eax, 0
-	mov al, [STACKP]
-	add eax, BASEP
+	;mov al, [STACKP]
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add eax, ebx
 	mov ebx, 0
 	mov ebx, [FIRST_STRUCT]
 	mov [eax], ebx
 
 	;Increment stack pointer
-	mov eax, 0
-	mov al, [STACKP]
-	add al, 4
-	mov [STACKP], eax
+	;mov eax, 0
+	;mov al, [STACKP]
+	add byte [STACKP], 4
 	mov dword[FIRST_STRUCT], 0
 
 	jmp read
