@@ -62,9 +62,9 @@ main:
 	
 	mov byte [eax],0xFF
 	mov dword [eax+1],0
-	mov byte [ebx],0x01
+	mov byte [ebx],0x0A
 	mov dword [ebx+1],0
-	mov byte [ecx],0x00
+	mov byte [ecx],0x04
 	mov dword [ecx+1],0
 
 	
@@ -130,8 +130,8 @@ power_2_y:
 	call inline_shl
 	add esp,4
 	
-	push dword [ebp-4]
 	push RPN_ONE
+	push dword [ebp-4]
 	call inline_plus
 	add esp,8
 	
