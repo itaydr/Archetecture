@@ -14,6 +14,10 @@ X_2_STRING:
 	DB	"%02x", 00
 X_1_STRING:
 	DB	"%x", 00
+NEWLINE:
+	DB 10, 00
+PROMPT:
+	DB "calc: ", 00
 
 RPN_ZERO:
 	DB	00,00,00,00,00
@@ -23,6 +27,7 @@ RPN_ONE:
 PLUS_CARRY_FLAG:	DB	0
 PLUS_CONTINUE_FLAG:	DB	0
 I:	DD	0, 10, 0
+I_2:	DD	0, 10, 0
 IS_VALID_NUM: DD 0, 10, 0
 LAST_STRUCT: DD 0
 BASEP: DD 0
@@ -51,6 +56,11 @@ main:
 
 read:
 	; Read num
+
+	push PROMPT
+	call printf
+	add esp, 4
+
 	push LC0
 	call gets
 	add esp, 4
@@ -58,6 +68,7 @@ read:
 	mov dword [IS_VALID_NUM], 0
 	mov dword [IS_NOT_EVEN], 0
 
+	add dword [I_2], 0
 checkIfNotEven:
 	mov eax, 0
 	add al, [I]
@@ -65,17 +76,24 @@ checkIfNotEven:
 	mov bl, [eax]
 	cmp bl, 0
 	jz checkIdNotEven_end
+
 	add dword [I], 1 
+
+	; check leading zeros
+	cmp bl, '0'
+	jz checkIfNotEven
+
+	add dword [I_2], 1 ; increment the counter of real digits (not zeros)
 	jmp checkIfNotEven
 checkIdNotEven_end:
 
-	mov eax, [I]
+	mov dword [I], 0
+	mov eax, [I_2]
+	mov dword [I_2], 0
 	and eax, 1
 	cmp eax, 0
 	jz parseLoop
 	mov byte [IS_NOT_EVEN], 1 ; remember we are not even.
-
-mov dword [I], 0
 
 parseLoop:
 	; Handle first of 2 chars
@@ -256,6 +274,11 @@ not_shift_right:
 	call DebugPrintNumber
 	call freeLinkList
 	add esp,4
+
+	push NEWLINE
+	call printf
+	add esp,4
+
 	jmp read
 not_pop:
 
@@ -395,6 +418,9 @@ notUpper_2:
 	push 5
 	call malloc
 	add esp,4
+
+	mov dword [eax+1],0
+	mov byte [eax],0
 										
 	; Save our byte 
 	mov bl, [LC1]
@@ -432,6 +458,7 @@ parseLoopEnd:
 	;Increment stack pointer
 	add byte [STACKP], 4
 	mov dword[LAST_STRUCT], 0
+	mov byte [IS_NOT_EVEN], 0
 
 	jmp read
 
@@ -466,7 +493,10 @@ DIE:
 	mov eax, [BASEP]
 	push eax
 	call free
-	;; TODO die properly here.
+	
+	mov ebx, 0
+	mov eax, 1
+	int 0x80
 
 
 
