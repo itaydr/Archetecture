@@ -103,10 +103,21 @@ not_leading_zero:
 	mov eax, [eax]
 	push eax
 
-	call plus
-	push eax
-	call DebugPrintNumber
+	call inline_plus
+	
+	; save num in stack
+	mov ecx, 0
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add ecx, ebx
+	mov ebx, 0
+	mov [ecx], eax
+
+	;Increment stack pointer
+	add byte [STACKP], 4
+
 	jmp read
+
 not_plus:
 
 ; check shift left
@@ -132,9 +143,19 @@ not_plus:
 	mov eax, [eax]
 	push eax
 
-	call plus
-	push eax
-	call DebugPrintNumber
+	call power_2_y
+
+	; save num in stack
+	mov ecx, 0
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add ecx, ebx
+	mov ebx, 0
+	mov [ecx], eax
+
+	;Increment stack pointer
+	add byte [STACKP], 4
+
 	jmp read
 not_shift_left:
 
@@ -161,9 +182,20 @@ not_shift_left:
 	mov eax, [eax]
 	push eax
 
-	call plus
-	push eax
-	call DebugPrintNumber
+	call power_2_minus_y
+
+	; save num in stack
+	mov ecx, 0
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add ecx, ebx
+	mov ebx, 0
+	mov [ecx], eax
+
+	;Increment stack pointer
+	add byte [STACKP], 4
+
+
 	jmp read
 not_shift_right:
 
@@ -179,7 +211,6 @@ not_shift_right:
 	add al, bl
 	mov eax, [eax]
 	push eax
-
 	call DebugPrintNumber
 	jmp read
 not_pop:
@@ -192,13 +223,22 @@ not_pop:
 	mov ebx, 0
 	mov bl, [STACKP]
 	add bl, -4
-	mov [STACKP], bl
 	add al, bl
 	mov eax, [eax]
 	push eax
-	call DebugPrintNumber
 
-	; call duplicate
+	call duplicate
+
+	; save num in stack
+	mov ecx, 0
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add ecx, ebx
+	mov ebx, 0
+	mov [ecx], eax
+
+	;Increment stack pointer
+	add byte [STACKP], 4
 
 	jmp read
 not_dup:
@@ -208,16 +248,26 @@ not_dup:
 	jnz not_noo
 	; pop 1
 	mov eax, [BASEP]
-	mov ebx, 0a
+	mov ebx, 0
 	mov bl, [STACKP]
 	add bl, -4
 	mov [STACKP], bl
 	add al, bl
 	mov eax, [eax]
 	push eax
-	call DebugPrintNumber
 
-	; call duplicate
+	call duplicate
+
+	; save num in stack
+	mov ecx, 0
+	mov ebx, [BASEP]
+	add ebx, [STACKP]
+	add ecx, ebx
+	mov ebx, 0
+	mov [ecx], eax
+
+	;Increment stack pointer
+	add byte [STACKP], 4
 
 	jmp read
 not_noo:
@@ -251,7 +301,7 @@ parseSecondByte:
 	; Handle second of two chars.
 	mov eax, 1
 	add al, [I]
-	add eax ,LC0													;; We have an error here on the second loop. Probably bad address.
+	add eax ,LC0						
 	mov bl, [eax]
 
 ;check digit
@@ -302,7 +352,6 @@ parseLoopEnd:
 	
 	; save num in stack
 	mov eax, 0
-	;mov al, [STACKP]
 	mov ebx, [BASEP]
 	add ebx, [STACKP]
 	add eax, ebx
@@ -324,231 +373,306 @@ errorBadNumber:
 
 
 Quit:
-	; Program should quit
 
+clearStackLoop:
+cmp byte [STACKP], 0
+jz DIE
+
+; pop 1
+
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	call duplicate ; TODO: call the free function.
+	jmp clearStackLoop
+
+clearStackLoop_end:
+
+DIE:
+	; free the stack memory.
+	mov eax, [BASEP]
+	push eax
+	call free
+	;; TODO die properly here.
 
 
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;; PLUS;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
-
-plus_main:
-	;start of main
-	pushad
-	push esp
-	mov ebp, esp
-	
-	mov eax, LC0
-	mov eax, 0x12345678
-	
-	sub esp, 8	; 3 variables
-	
-;	push 5
-;	call malloc
-;	add esp,4
-;	mov [ebp-12], eax
-	
-	push 5
-	call malloc
-	add esp,4
-	mov [ebp-8], eax
-	
-	push 5
-	call malloc
-	add esp,4
-	mov [ebp-4], eax
-	
-	mov eax, [ebp-4]
-	mov ebx, [ebp-8]
-;	mov ecx, [ebp-12]
-	
-	mov byte [eax],0xFF
-	mov dword [eax+1],0
-	mov byte [ebx],0xFF
-	mov dword [ebx+1],0
-	
-;	push ecx
-	push ebx
-	push eax
-	call plus
-	
-	; end of main
-returnAddress:
-	mov ecx, eax
-	
-	push ecx
-	call DebugPrintNumber
-	add esp, 4
-	
-	
-	add esp, 8
-	
-	pop ebp
-	popad
-
-	push CRASH_STRING
-	call printf
-	add esp,4
-	
-	
-	mov ebx,0
-	mov eax,1
-;	int 0x80	;-	Linux only!!
-	xor eax,eax
-	mov ah,4Ch
-	int 21h
-
-	
-plus:
-	;; Function plus:
-	;	args: 	[ebp+8]	 - pointer to num A
-	;			[ebp+12] - pointer to num B
-	;	return:	eax - pointer to new allocated num or 0 if no such num
-		
-		; TODO continue
+;------------------------------------------------------------------------------------------------------
+compare:
+	;; Function compare:
+	;	args: 	[ebp+8]	 	- pointer to num A
+	;	args: 	[ebp+12]	- pointer to num B
+	;	return:	eax - True (1) or False (0)
 		
 	push ebp
 	mov ebp, esp
 	
-	sub esp, 16
+	cmp dword [ebp+8], 0			; check end of Num A
+	jz .arg1ZeroCheckArg2
+	cmp dword [ebp+12], 0			; check end of Num B
+	jz .false
+	
+	mov ebx, [ebp+12]
+	mov cl, [ebx]
+	mov ebx, [ebp+8]
+	mov bl, [ebx]
+	
+	cmp cl, bl
+	jnz .false
+	
+	mov ebx, [ebp+12]
+	mov ebx, [ebx+1]
+	push ebx
+	mov ebx, [ebp+8]
+	mov ebx, [ebx+1]
+	push ebx
+	call compare
+	add esp,8
+	jmp .done
+.arg1ZeroCheckArg2:
+	cmp dword [ebp+12], 0			; check end of Num B
+	jz .true
+	jmp .false
+.true:
+	mov eax, 1
+	jmp .done
+.false:
+	mov eax, 0
+	jmp .done
+.done:
+	pop ebp
+	ret
+
+;------------------------------------------------------------------------------------------------------
+
+
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+duplicate:
+	;; Function duplicate:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;	return:	eax - pointer to new allocated num B which is a duplication of num A
+		
+	; part 1 - first chain, check if need to malloc ecx struct
+	push ebp
+	mov ebp, esp
+	
+	sub esp, 4 			; temp variable (will hold first in chain)
+	mov dword [ebp-4], 0		; temp = 0
+	
+	cmp dword [ebp+8], 0			; sanity check
+	jz .done
+	
+	; malloc struct and call duplicate helper
+	push 5
+	call malloc
+	add esp, 4
+	
+	mov [ebp-4], eax		; temp = malloc(5)
+	mov ecx, eax			; ecx = eax (=temp)
+	mov eax, [ebp+8]		; temp = 0
+	
+	push ecx
+	push eax
+	call duplicate_rec
+	add esp, 8
+.done:
+	mov eax, [ebp-4]
+	
+	add esp ,4
+	pop ebp
+	ret
+
+duplicate_rec:
+	;; Function duplicate:
+	;	args: 	[ebp+8]	 	- pointer to num A
+	;	args: 	[ebp+12]	- pointer to allocated struct for num B
+	;	return:	None
+	
+	push ebp
+	mov ebp, esp
 	
 	mov eax, [ebp+8]	;arg1
 	mov ebx, [ebp+12]	;arg2
 	
+	xor edx,edx
+	mov dl, [eax]
+	mov [ebx], dl	; copy value
 	
-	; initialization
-	mov ecx, 0
-	mov byte [PLUS_CARRY_FLAG], 0
-		
-.plusLoop:	
-	;sanity check of to allocate ecx
-	cmp eax,0
-	jnz .sanityPass
-	cmp ebx,0
-	jnz .sanityPass
-	cmp byte [PLUS_CARRY_FLAG],0
-	jnz .sanityPass
-	
-	jmp .done
-	.sanityPass:
-	
-	; allocate ecx
-	; save registers
-	mov [ebp-4],   eax
-	mov [ebp-8],   ebx
-	mov [ebp-12],  ecx
+	cmp dword [eax+1], 0
+	jz .finishCopy
 	
 	push 5
 	call malloc
 	add esp, 4
 	
-	mov ecx, [ebp-12] 	;load ecx before malloc
+	mov ebx, [ebp+12]	; reload ebx
+	mov [ebx+1], eax	; set new pointer
+	mov eax, [ebp+8]	; reload eax
 	
-	cmp ecx, 0 ; this is the initial loop
-	jz .ecxInitialChain
-	mov [ecx+1],eax		;attach it to the new struct
-	mov ecx, [ecx+1]	;mov to it
-	jmp .ecxReady
-.ecxInitialChain:
-	mov ecx, eax
-	mov [ebp-16],  ecx ; this is the start of the chain!
-.ecxReady:
-
-	mov eax, [ebp-4] ;load eax before malloc
-	mov ebx, [ebp-8] ;load ebx before malloc
-	
-	; ready - do the calculation!
-	
-	xor edx,edx		;reset edx
-	mov byte dl,[PLUS_CARRY_FLAG]	; add carry (if any)
-	
-	; reset carry flag and continuation flag
-	mov byte [PLUS_CARRY_FLAG],0
-	mov byte [PLUS_CONTINUE_FLAG],0
-	
-	; add eax number if any
-	cmp eax,0
-	jz .afterEax
-	mov byte [PLUS_CONTINUE_FLAG],1
-	add byte dl,[eax]
+	; advance pointers
 	mov eax, [eax+1]
-	JNC .noCarryFirst
-	mov byte [PLUS_CARRY_FLAG],1
-.afterEax:
-.noCarryFirst:
-
-	; add ebx number if any
-	cmp ebx,0
-	jz .afterEbx
-	mov byte [PLUS_CONTINUE_FLAG],1
-	add byte dl, [ebx]
 	mov ebx, [ebx+1]
-	JNC .noCarrySecond
-	mov byte [PLUS_CARRY_FLAG],1
-.afterEbx:
-.noCarrySecond:
 	
-	; ecx is allocated, set the value
-	mov byte [ecx],dl
-	cmp byte [PLUS_CONTINUE_FLAG],0
-	jz .done
-	
-	jmp .plusLoop
-	
-.done:
-	cmp ecx,0
-	jz .ecxIsNothing
-	mov dword [ecx+1],0
-.ecxIsNothing:
-
-;	; free 2 last numbers - load original pointer
-;	mov eax,  [ebp+8]	;arg1
-;	push eax
-;	call freeLinkList
-;	add esp, 4
-;	
-;	mov ebx,  [ebp+12]	;arg2
-;	push ebx
-;	call freeLinkList
-;	add esp, 4
-	
-	mov eax, [ebp-16] ; load to eax the start of the chain!
-	add esp,16 ;clear local variables
-	
+	push ebx
+	push eax
+	call duplicate_rec
+	add esp, 8
+	jmp .duplicate_rec_ret
+.finishCopy:
+	mov dword [ebx+1], 0
+.duplicate_rec_ret:
 	pop ebp
 	ret
 	
+;------------------------------------------------------------------------------------------------------------------------------------
+
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+inline_plus:
+	;; Function plus:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;			[ebp+12] - pointer to num B
+	;	return:	eax - pointer to numA after adding num A and num B
 	
-	
-;----------
-freeLinkList:
 	push ebp
-	mov ebp,esp
-	cmp dword [ebp+8],0
-	jz .freeDone
+	mov ebp, esp
+
+	mov eax, [ebp+8]	;arg1
+	mov ebx, [ebp+12]	;arg2
+	
+	push 0			; initial carry
+	push dword [ebp+12]	; num B
+	push dword [ebp+8]	; num A
+	call inline_plus_rec
+	add esp,3*4
 	mov eax, [ebp+8]
 	
-	push dword [eax+1] ;prepare next chain
-	call freeLinkList
-	add esp, 4
-	
-	; restore prepeare free
-	push dword [ebp+8]
-	call free
-	add esp, 4
-	
-	.freeDone:
 	pop ebp
 	ret
 	
 	
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRINT;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+inline_plus_rec:
+	;; Function plus:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;			[ebp+12] - pointer to num B
+	;			[ebp+16] - 0 / 1 carry
+	;	return:	none
+	
+	push ebp
+	mov ebp, esp
+	
+	sub esp, 16
+	mov dword [ebp-16], 0		;arg4 - new carry - continue flag for first add linitialized to 0
+	
+	mov eax, [ebp+8]	;arg1
+	mov ebx, [ebp+12]	;arg2
+	mov ecx, [ebp+16]	;arg3 - carry
+	
+	add [eax], cl		; add old carry to eax
+	jc .setContinueFlag
+	mov dword [ebp-16],0
+	jmp .finishedOldCarry
+.setContinueFlag:
+	mov dword [ebp-16],1
+.finishedOldCarry:	
+	
+	xor edx, edx
+	mov dl, [ebx]
+	add [eax], dl
+	jnc .noCarry
+.yesCarry:
+	cmp dword [eax+1], 0
+	jnz .nextEaxAllocated
+	; allocate eax
+	mov [ebp-4],  eax	; temp_var1
+	mov [ebp-8],  ebx	; temp_var2
+	mov [ebp-12], ecx	; temp_var3 - carry
+	
+	push 5
+	call malloc
+	add esp,4
+	
+	mov dword [eax+1],0
+	mov byte  [eax],0
+	
+	mov edx, eax
+	mov eax, [ebp-4]	; temp_var1
+	mov ebx, [ebp-8]	; temp_var2
+	mov ecx, [ebp-12]	; temp_var3 - carry
+	
+	mov [eax+1], edx
+.nextEaxAllocated:
+	cmp dword [ebx+1],0
+	jnz .recursionCallWithNextEbx
+	push 0
+	push RPN_ONE
+	push dword [eax+1]
+	call inline_plus_rec
+	add esp, 12
+	jmp .done
+.recursionCallWithNextEbx:
+	push 1
+	push dword [ebx+1]
+	push dword [eax+1]
+	call inline_plus_rec
+	add esp, 12
+	jmp .done
+
+.noCarry:		; no carry on second adding
+	cmp dword [ebp-16],0 ; check first carry
+	jnz .yesCarry
+	
+	cmp dword [ebx+1], 0
+	jz .done
+	
+	; [ebx+1] != 0  ==> we need to continue to the next element in chain
+	cmp dword [eax+1], 0
+	jnz .nextEaxAllocated2
+	; allocate eax
+	mov [ebp-4],  eax	; temp_var1
+	mov [ebp-8],  ebx	; temp_var2
+	mov [ebp-12], ecx	; temp_var3 - carry
+	
+	push 5
+	call malloc
+	add esp,4
+	
+	mov dword [eax+1],0
+	mov byte  [eax],0
+	
+	mov edx, eax
+	mov eax, [ebp-4]	; temp_var1
+	mov ebx, [ebp-8]	; temp_var2
+	mov ecx, [ebp-12]	; temp_var3 - carry
+	
+	mov [eax+1], edx
+.nextEaxAllocated2:
+	push 0
+	push dword [ebx+1]
+	push dword [eax+1]
+	call inline_plus_rec
+	add esp, 12
+	jmp .done
+.done:
+	add esp, 16
+	pop ebp
+	ret	
 
 
+	
+;------------------------------------------------------------------------------------------------------------------------------
 DebugPrintNumber:
 	push ebp
 	mov ebp,esp
@@ -579,28 +703,264 @@ DebugPrintNumber:
 .done:
 	pop ebp
 	ret
-	
-DebugPrintNumber_rec:
+;----------------------------------------------------------------
+
+
+;------------------------------------------------------------------------------------------------------------------------------------------------------------------
+power_2_y:
+	;; Function power_2_y:
+	;	args: 	[ebp+8]	 	- pointer to num A
+	;	args: 	[ebp+12]	 - pointer to num B
+	;	return:	eax - pointer to numA after shl B times
 	push ebp
 	mov ebp,esp
 	
-	cmp dword [ebp+8], 0
-	jz .done
+	sub esp, 4				; make room for counter variable
 	
-	mov eax, [ebp+8]
-	mov eax, [eax+1]
-	push eax
-	call DebugPrintNumber_rec
+	; sannity check [ebp+12] == 0
+	mov eax, [ebp+12]
+	cmp dword [eax+1], 0
+	jnz .sanity_ok
+	cmp byte [eax], 0
+	jnz .sanity_ok
+	jmp .done
+	
+	; [ebp+12] is not zero. we can work...
+.sanity_ok:	
+	push RPN_ZERO
+	call duplicate
+	add esp, 4
+	
+	mov [ebp-4], eax			; counter variable = currently 0
+	
+.power_loop:
+	push dword [ebp+8]
+	call inline_shl
 	add esp,4
 	
+	push RPN_ONE
+	push dword [ebp-4]
+	call inline_plus
+	add esp,8
+	
+	push dword [ebp-4]
+	push dword [ebp+12]
+	call compare
+	add esp,8
+	cmp eax, 0
+	jz .power_loop
+.done:
+	add esp,4
 	mov eax, [ebp+8]
-	xor ebx,ebx
-	add bl,[eax]
+	pop ebp
+	ret
+	
+	
+inline_shl:
+	;; Function inline_shl:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;	return:	eax - pointer to numA after shl
+	
+	push ebp
+	mov ebp, esp
+
+	mov eax, [ebp+8]	;arg1
+	
+	push 0			; initial bit to push from right
+	push dword [ebp+8]	; num A
+	call inline_shl_rec
+	add esp,2*4
+	mov eax, [ebp+8]
+	
+	pop ebp
+	ret
+	
+	
+inline_shl_rec:
+	;; Function plus:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;			[ebp+12] - 0 / 1 bit to push from right
+	;	return:	none
+	
+	push ebp
+	mov ebp, esp
+	
+;	sub esp, 16
+	mov eax, [ebp+8]	;arg1
+	
+	cmp eax,0
+	jz .done
+
+;;;	mov ebx, [ebp+12]	;arg2 - bit to push from right
+	
+	shl byte [eax], 1
+	jc .hasCarry
+	mov ebx, 0
+	jmp .afterCarry
+.hasCarry:
+	mov ebx, 1
+.afterCarry:
+	; change the old bit from previous chain
+	mov edx,[ebp+12]
+	or byte [eax], dl
+	
+	cmp dword [eax+1], 0
+	jnz .nextEaxAllocated
+	cmp ebx, 0
+	jz .done
+	
+	; allocate eax
+	push eax
 	push ebx
-	push X_2_STRING
-	call printf
+	
+	push 5
+	call malloc
+	add esp,4
+	
+	mov dword [eax+1],0
+	mov byte  [eax],0
+	
+	mov edx, eax
+	pop ebx
+	pop eax
+	mov [eax+1], edx
+.nextEaxAllocated:
+	
+	push ebx
+	push dword [eax+1]
+	call inline_shl_rec
 	add esp,8
 	
 .done:
 	pop ebp
 	ret
+	
+;----------------------------------------------------------------------------------------------------------------------------------
+
+
+;///////----------------------------------------------------------- power_2_minus_y ---------------------------------------
+power_2_minus_y:
+	;; Function power_2_minus_y:
+	;	args: 	[ebp+8]	 	- pointer to num A
+	;	args: 	[ebp+12]	 - pointer to num B
+	;	return:	eax - pointer to numA after shr B times
+	push ebp
+	mov ebp,esp
+	
+	sub esp, 4				; make room for counter variable
+	
+	; sannity check [ebp+12] == 0
+	mov eax, [ebp+12]
+	cmp dword [eax+1], 0
+	jnz .sanity_ok
+	cmp byte [eax], 0
+	jnz .sanity_ok
+	jmp .done
+	
+	; [ebp+12] is not zero. we can work...
+.sanity_ok:	
+	push RPN_ZERO
+	call duplicate
+	add esp, 4
+	
+	mov [ebp-4], eax			; counter variable = currently 0
+	
+.power_loop:
+	push dword [ebp+8]
+	call inline_shr
+	add esp,4
+	
+	push RPN_ONE
+	push dword [ebp-4]
+	call inline_plus
+	add esp,8
+	
+	push dword [ebp-4]
+	push dword [ebp+12]
+	call compare
+	add esp,8
+	cmp eax, 0
+	jz .power_loop
+.done:
+	add esp,4
+	mov eax, [ebp+8]
+	pop ebp
+	ret
+	
+	
+inline_shr:
+	;; Function inline_shr:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;	return:	eax - pointer to numA after shr
+	
+	push ebp
+	mov ebp, esp
+
+	mov eax, [ebp+8]	;arg1
+	
+	; sanity check if num A is a single node
+	cmp dword [eax+1], 0
+	jz .singleNode
+	
+	push dword [ebp+8]	; num A
+	call inline_shr_rec
+	add esp,1*4
+	mov eax, [ebp+8]
+	jmp .done
+.singleNode:
+	shr byte [eax], 1
+.done:
+	pop ebp
+	ret
+	
+	
+inline_shr_rec:
+	;; Function plus:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;	return:	eax = 1 - need to free pointer, else eax = 0
+	
+	push ebp
+	mov ebp, esp
+	
+	mov eax, [ebp+8]	;arg1 - current node
+	
+	mov ebx, [eax+1]	; load next node
+	
+	shr byte [eax],1	; do the SHR in current node
+	
+	cmp ebx, 0
+	jnz .hasNextNode
+	cmp byte [eax], 0
+	jz .eaxFlagFree
+	mov eax, 0
+	jmp .done
+.eaxFlagFree:
+	mov eax, 1
+	jmp .done
+.hasNextNode:
+	xor ecx, ecx
+	mov byte cl, 1
+	and cl, [ebx]
+	shl cl,7
+	or byte [eax],cl
+		;; recursive call
+	push ebx
+	call inline_shr_rec
+	add esp,4
+		;; check if need to free the next chain
+	cmp eax,0
+	jz .done
+		;; we need to free the next node
+	mov eax, [ebp+8]	;arg1 - current node
+	push dword [eax+1]
+	call free
+	add esp,4
+	mov eax, [ebp+8]
+	mov dword [eax+1],0
+	mov eax,0
+.done:
+	
+	pop ebp
+	ret
+
+;----------------------------------------------------------------------------------------------------------------------------------
