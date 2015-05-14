@@ -84,7 +84,6 @@ parseLoop:
 	add al, bl
 	mov eax, [eax]
 	push eax
-	call DebugPrintNumber
 
 	; pop 2
 	mov eax, [BASEP]
@@ -95,13 +94,126 @@ parseLoop:
 	add al, bl
 	mov eax, [eax]
 	push eax
-	call DebugPrintNumber
 
 	call plus
 	push eax
 	call DebugPrintNumber
 	jmp read
 not_plus:
+
+; check shift left
+	cmp bl, '^'
+	jnz not_shift_left
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	; pop 2
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	call plus
+	push eax
+	call DebugPrintNumber
+	jmp read
+not_shift_left:
+
+; check shift right
+	cmp bl, 'v'
+	jnz not_shift_right
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	; pop 2
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	call plus
+	push eax
+	call DebugPrintNumber
+	jmp read
+not_shift_right:
+
+; check pop and print
+	cmp bl, 'v'
+	jnz not_pop
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+
+	call DebugPrintNumber
+	jmp read
+not_pop:
+
+; check pop and print
+	cmp bl, 'd'
+	jnz not_pop
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+	call DebugPrintNumber
+
+	; call duplicate
+
+	jmp read
+not_pop:
+
+; check number of ones
+	cmp bl, 'd'
+	jnz not_noo
+	; pop 1
+	mov eax, [BASEP]
+	mov ebx, 0
+	mov bl, [STACKP]
+	add bl, -4
+	mov [STACKP], bl
+	add al, bl
+	mov eax, [eax]
+	push eax
+	call DebugPrintNumber
+
+	; call duplicate
+
+	jmp read
+not_noo:
+
 
 ;check digit
 	cmp bl, '0'     ; handle 0-9
