@@ -2,7 +2,7 @@ section .bss
 
 section	.data
 LC0:
-	DB	"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", 100, 0	; Format string
+	DB	"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", 10, 0	; Format string
 LC1:
 	DB "", 10, 0
 X_STRING:
@@ -28,6 +28,7 @@ LAST_STRUCT: DD 0
 BASEP: DD 0
 STACKP: DD 0
 SZ: DD 20 ; 4 bytes for 5 slots
+IS_NOT_EVEN: DD 0
 
 
 section .text
@@ -55,6 +56,26 @@ read:
 	add esp, 4
 	mov dword [I], 0
 	mov dword [IS_VALID_NUM], 0
+	mov dword [IS_NOT_EVEN], 0
+
+checkIfNotEven:
+	mov eax, 0
+	add al, [I]
+	add eax ,LC0										
+	mov bl, [eax]
+	cmp bl, 0
+	jz checkIdNotEven_end
+	add dword [I], 1 
+	jmp checkIfNotEven
+checkIdNotEven_end:
+
+	mov eax, [I]
+	and eax, 1
+	cmp eax, 0
+	jz parseLoop
+	mov byte [IS_NOT_EVEN], 1 ; remember we are not even.
+
+mov dword [I], 0
 
 parseLoop:
 	; Handle first of 2 chars
@@ -104,6 +125,14 @@ not_leading_zero:
 	push eax
 
 	call inline_plus
+	add esp,4
+	pop ebx
+	push eax
+	push ebx
+	call freeLinkList
+	add esp,4
+	pop eax
+
 	
 	; save num in stack
 	mov ecx, 0
@@ -144,6 +173,13 @@ not_plus:
 	push eax
 
 	call power_2_y
+	add esp,4
+	pop ebx
+	push eax
+	push ebx
+	call freeLinkList
+	add esp,4
+	pop eax
 
 	; save num in stack
 	mov ecx, 0
@@ -183,6 +219,13 @@ not_shift_left:
 	push eax
 
 	call power_2_minus_y
+	add esp,4
+	pop ebx
+	push eax
+	push ebx
+	call freeLinkList
+	add esp,4
+	pop eax
 
 	; save num in stack
 	mov ecx, 0
@@ -194,7 +237,6 @@ not_shift_left:
 
 	;Increment stack pointer
 	add byte [STACKP], 4
-
 
 	jmp read
 not_shift_right:
@@ -212,6 +254,8 @@ not_shift_right:
 	mov eax, [eax]
 	push eax
 	call DebugPrintNumber
+	call freeLinkList
+	add esp,4
 	jmp read
 not_pop:
 
@@ -228,6 +272,7 @@ not_pop:
 	push eax
 
 	call duplicate
+	add esp,4
 
 	; save num in stack
 	mov ecx, 0
@@ -256,7 +301,14 @@ not_dup:
 	mov eax, [eax]
 	push eax
 
-	call duplicate
+	call countBits
+	pop ebx
+	push eax
+	push ebx
+	call freeLinkList
+	add esp,4
+	pop eax
+	
 
 	; save num in stack
 	mov ecx, 0
@@ -271,7 +323,6 @@ not_dup:
 
 	jmp read
 not_noo:
-
 
 ;check digit
 	cmp bl, '0'     ; handle 0-9
@@ -298,6 +349,18 @@ notDigit:
 notUpper:
 
 parseSecondByte:
+
+	; restore the shift if we only need one byte from this.
+	cmp byte [IS_NOT_EVEN], 1
+	jnz even_number
+	mov ebx, 0
+	mov bl, [LC1]
+	shr bl, 4
+	mov byte [LC1], bl
+	jmp notUpper_2
+
+even_number:
+
 	; Handle second of two chars.
 	mov eax, 1
 	add al, [I]
@@ -346,7 +409,14 @@ afterConnectPreviousStruct:
 
 	mov dword [LAST_STRUCT], eax ; save this struct for next loop.
 
-	add dword [I], 2 ; 2 because we parse 2 byts at a loop
+	mov ebx ,2 ; 2 because we parse 2 byts at a loop
+	cmp byte [IS_NOT_EVEN], 1
+	jnz even_number_2
+	mov ebx, 1 ; 1 because we only read one byte at the first loop.
+	mov byte [IS_NOT_EVEN], 0
+
+even_number_2:
+	add dword [I], ebx 
 	jmp parseLoop
 parseLoopEnd:
 	
@@ -360,8 +430,6 @@ parseLoopEnd:
 	mov [eax], ebx
 
 	;Increment stack pointer
-	;mov eax, 0
-	;mov al, [STACKP]
 	add byte [STACKP], 4
 	mov dword[LAST_STRUCT], 0
 
@@ -378,8 +446,6 @@ clearStackLoop:
 cmp byte [STACKP], 0
 jz DIE
 
-; pop 1
-
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -390,7 +456,7 @@ jz DIE
 	mov eax, [eax]
 	push eax
 
-	call duplicate ; TODO: call the free function.
+	call freeLinkList
 	jmp clearStackLoop
 
 clearStackLoop_end:
@@ -964,3 +1030,142 @@ inline_shr_rec:
 	ret
 
 ;----------------------------------------------------------------------------------------------------------------------------------
+
+;;--------------------------------------------------------------------------------------
+countBits:
+	;; Function countBits:
+	;	args: 	[ebp+8]	 	- pointer to num A to count the '1' bits in it
+	;	return:	eax - pointer to num B that contains the number of '1' bits in num A
+	push ebp
+	mov ebp,esp
+	
+	xor ecx,ecx		; set the counter to 0
+	
+	push dword [ebp+8]
+	call countBitsHelper
+	add esp, 4
+	
+	push ecx
+	call createRPNnum
+	add esp,4
+	
+	pop ebp
+	ret
+	
+	
+countBitsHelper:
+	;; Function countBitsHelper:
+	;	args: 	[ebp+8]	 - pointer to chain in num A
+	;	return:	none - increase ecx for every '1' in current chain
+	
+	push ebp
+	mov ebp, esp
+
+	mov eax, [ebp+8]	;arg1
+	
+	; sanity check if we are at the end
+	cmp eax, 0
+	jz .done
+	
+	; initialize
+	xor edx,edx
+	xor ebx,ebx
+	mov dl, [eax]
+	
+.loop:
+	mov bl,dl
+	and bl,1
+	add ecx,ebx
+	shr dl, 1
+	cmp dl,0
+	jnz .loop
+	
+.done_calculate:
+	mov eax, [eax+1]
+	
+	push eax
+	call countBitsHelper
+	add esp, 4
+.done:
+	pop ebp
+	ret
+
+createRPNnum:
+	;; Function createRPNnum:
+	;	args: 	[ebp+8]	 - register with num of '1' to create RPN number
+	;	return:	eax - pointer to num of '1' to create RPN number
+	
+	push ebp
+	mov ebp, esp
+
+	mov ebx, [ebp+8]	;arg1 - number
+
+	push 5
+	call malloc
+	add esp,4
+	mov byte  [eax],0
+	mov dword [eax+1],0
+
+	mov ecx, eax	; ecx holds start of chain
+	
+	cmp ebx, 0
+	jz .done
+	
+.createNode:
+	mov edx, ebx
+	mov [eax], bl
+	
+	shr ebx, 8
+	
+	cmp ebx, 0
+	jz .done
+	
+	push ecx
+	push ebx
+	push eax
+	
+	push 5
+	call malloc
+	add esp,4
+	mov byte  [eax],0
+	mov dword [eax+1],0
+
+	pop ebx
+	mov dword [ebx+1], eax
+	
+	pop ebx
+	pop ecx
+	
+	jmp .createNode
+.done:
+	mov eax, ecx
+	pop ebp
+	ret
+
+;------------------------------------------------------------------------------------------------
+
+freeLinkList:
+	;; Function freeLinkList:
+	;	args: 	[ebp+8]	 - pointer to num A
+	;	return:	eax - 0
+	
+	push ebp
+	mov ebp,esp
+	cmp dword [ebp+8],0
+	jz .freeDone
+	mov eax, [ebp+8]
+	
+	push dword [eax+1] ;prepare next chain
+	call freeLinkList
+	add esp, 4
+	
+	; restore prepeare free
+	push dword [ebp+8]
+	call free
+	add esp, 4
+	
+	.freeDone:
+	mov eax, 0
+	
+	pop ebp
+	ret
