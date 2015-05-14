@@ -72,6 +72,14 @@ parseLoop:
 	cmp bl, 'Q'
 	jz Quit
 
+; check leading zeros
+	cmp bl, '0'
+	jnz not_leading_zero
+	add dword [I], 1 ; advance to the next digit.
+	jmp parseLoop
+
+not_leading_zero:
+
 ; check plus
 	cmp bl, '+'
 	jnz not_plus
@@ -160,7 +168,7 @@ not_shift_left:
 not_shift_right:
 
 ; check pop and print
-	cmp bl, 'v'
+	cmp bl, 'p'
 	jnz not_pop
 	; pop 1
 	mov eax, [BASEP]
@@ -176,9 +184,9 @@ not_shift_right:
 	jmp read
 not_pop:
 
-; check pop and print
+; check duplicate
 	cmp bl, 'd'
-	jnz not_pop
+	jnz not_dup
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -193,14 +201,14 @@ not_pop:
 	; call duplicate
 
 	jmp read
-not_pop:
+not_dup:
 
 ; check number of ones
-	cmp bl, 'd'
+	cmp bl, 'n'
 	jnz not_noo
 	; pop 1
 	mov eax, [BASEP]
-	mov ebx, 0
+	mov ebx, 0a
 	mov bl, [STACKP]
 	add bl, -4
 	mov [STACKP], bl
@@ -274,9 +282,7 @@ notUpper_2:
 	push 5
 	call malloc
 	add esp,4
-	
-dontSaveFirst:
-											;;;;;;;;;;;;;;;;;;;;;;;;;;; Not connecting last struct properly. We shoud connect the last struct to the new one, and not vice versa.
+										
 	; Save our byte 
 	mov bl, [LC1]
 	mov byte [eax], bl
