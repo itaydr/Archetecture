@@ -10,15 +10,25 @@ X_STRING:
 CRASH_STRING:
 	DB	0x0d, 0x0a, "Crashing because i dont know to exit windows..." ,00
 
+X_2_STRING:
+	DB	"%02x", 00
+X_1_STRING:
+	DB	"%x", 00
+
+RPN_ZERO:
+	DB	00,00,00,00,00
+RPN_ONE:
+	DB	01,00,00,00,00
+
 PLUS_CARRY_FLAG:	DB	0
 PLUS_CONTINUE_FLAG:	DB	0
 I:	DD	0, 10, 0
 IS_VALID_NUM: DD 0, 10, 0
 LAST_STRUCT: DD 0
-FIRST_STRUCT: DD 0
 BASEP: DD 0
 STACKP: DD 0
 SZ: DD 20 ; 4 bytes for 5 slots
+
 
 section .text
 	align 32
@@ -74,6 +84,7 @@ parseLoop:
 	add al, bl
 	mov eax, [eax]
 	push eax
+	call DebugPrintNumber
 
 	; pop 2
 	mov eax, [BASEP]
@@ -84,8 +95,11 @@ parseLoop:
 	add al, bl
 	mov eax, [eax]
 	push eax
+	call DebugPrintNumber
 
 	call plus
+	push eax
+	call DebugPrintNumber
 	jmp read
 not_plus:
 
@@ -149,10 +163,6 @@ notUpper_2:
 	call malloc
 	add esp,4
 	
-	; Save a pointer for the first struct.
-	cmp dword [FIRST_STRUCT], 0
-	jnz dontSaveFirst
-	mov [FIRST_STRUCT], eax
 dontSaveFirst:
 											;;;;;;;;;;;;;;;;;;;;;;;;;;; Not connecting last struct properly. We shoud connect the last struct to the new one, and not vice versa.
 	; Save our byte 
@@ -179,14 +189,14 @@ parseLoopEnd:
 	add ebx, [STACKP]
 	add eax, ebx
 	mov ebx, 0
-	mov ebx, [FIRST_STRUCT]
+	mov ebx, [LAST_STRUCT]
 	mov [eax], ebx
 
 	;Increment stack pointer
 	;mov eax, 0
 	;mov al, [STACKP]
 	add byte [STACKP], 4
-	mov dword[FIRST_STRUCT], 0
+	mov dword[LAST_STRUCT], 0
 
 	jmp read
 
@@ -417,6 +427,10 @@ freeLinkList:
 	ret
 	
 	
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; PRINT;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
 DebugPrintNumber:
 	push ebp
 	mov ebp,esp
@@ -434,11 +448,41 @@ DebugPrintNumber:
 	xor ebx,ebx
 	add bl,[eax]
 	push ebx
-	push X_STRING
+	cmp dword [eax+1], 0
+	jz .printEndOfChain
+	push X_2_STRING
+	jmp .printfNumber
+.printEndOfChain:
+	push X_1_STRING
+.printfNumber:
 	call printf
 	add esp,8
 	
 .done:
 	pop ebp
 	ret
-
+	
+DebugPrintNumber_rec:
+	push ebp
+	mov ebp,esp
+	
+	cmp dword [ebp+8], 0
+	jz .done
+	
+	mov eax, [ebp+8]
+	mov eax, [eax+1]
+	push eax
+	call DebugPrintNumber_rec
+	add esp,4
+	
+	mov eax, [ebp+8]
+	xor ebx,ebx
+	add bl,[eax]
+	push ebx
+	push X_2_STRING
+	call printf
+	add esp,8
+	
+.done:
+	pop ebp
+	ret
