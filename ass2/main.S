@@ -34,6 +34,7 @@ BASEP: DD 0
 STACKP: DD 0
 SZ: DD 20 ; 4 bytes for 5 slots
 IS_NOT_EVEN: DD 0
+SHOULD_CHECK_LEADING_ZERO: DD 0
 
 
 section .text
@@ -67,6 +68,7 @@ read:
 	mov dword [I], 0
 	mov dword [IS_VALID_NUM], 0
 	mov dword [IS_NOT_EVEN], 0
+	mov byte [SHOULD_CHECK_LEADING_ZERO], 1
 
 	add dword [I_2], 0
 checkIfNotEven:
@@ -75,21 +77,27 @@ checkIfNotEven:
 	add eax ,LC0										
 	mov bl, [eax]
 	cmp bl, 0
-	jz checkIdNotEven_end
+	jz checkIfNotEven_end
 
 	add dword [I], 1 
 
 	; check leading zeros
+	cmp byte [SHOULD_CHECK_LEADING_ZERO], 1
+	jnz not_leading_zero_2
 	cmp bl, '0'
 	jz checkIfNotEven
 
+not_leading_zero_2:
+	mov dword [SHOULD_CHECK_LEADING_ZERO], 0 ; we found a number, stop looking for leading zeros.
+
 	add dword [I_2], 1 ; increment the counter of real digits (not zeros)
 	jmp checkIfNotEven
-checkIdNotEven_end:
+checkIfNotEven_end:
 
 	mov dword [I], 0
 	mov eax, [I_2]
 	mov dword [I_2], 0
+	mov dword [SHOULD_CHECK_LEADING_ZERO], 1
 	and eax, 1
 	cmp eax, 0
 	jz parseLoop
@@ -112,12 +120,15 @@ parseLoop:
 	jz Quit
 
 ; check leading zeros
+	cmp byte [SHOULD_CHECK_LEADING_ZERO], 1
+	jnz not_leading_zero
 	cmp bl, '0'
 	jnz not_leading_zero
 	add dword [I], 1 ; advance to the next digit.
 	jmp parseLoop
 
 not_leading_zero:
+mov dword [SHOULD_CHECK_LEADING_ZERO], 0
 
 ; check plus
 	cmp bl, '+'
