@@ -9,6 +9,10 @@ X_STRING:
 	DB	"%x", 00
 CRASH_STRING:
 	DB	0x0d, 0x0a, "Crashing because i dont know to exit windows..." ,00
+CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE:
+	DB	0x0d, 0x0a, "Can't perform operation, not enougth parameters in stack." ,10 ,00
+STACK_OVERFLOW:
+	DB	0x0d, 0x0a, "Stack Overflow.." , 10 ,00
 
 X_2_STRING:
 	DB	"%02x", 00
@@ -133,6 +137,19 @@ mov dword [SHOULD_CHECK_LEADING_ZERO], 0
 ; check plus
 	cmp bl, '+'
 	jnz not_plus
+
+	; Make sure the stack is not full.
+	mov al ,4  ; the stack size.
+	mov bl , [STACKP];
+	cmp bl ,al
+	jg stack_ok_plus
+	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
+	call printf
+	add esp, 4
+	call read
+
+stack_ok_plus:
+
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -181,6 +198,19 @@ not_plus:
 ; check shift left
 	cmp bl, '^'
 	jnz not_shift_left
+
+	; Make sure the stack is not full.
+	mov al ,4  ; the stack size.
+	mov bl , [STACKP];
+	cmp bl ,al
+	jg stack_ok_shl
+	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
+	call printf
+	add esp, 4
+	call read
+
+stack_ok_shl:
+
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -227,6 +257,19 @@ not_shift_left:
 ; check shift right
 	cmp bl, 'v'
 	jnz not_shift_right
+
+	; Make sure the stack is not full.
+	mov al ,4  ; the stack size.
+	mov bl , [STACKP];
+	cmp bl ,al
+	jg stack_ok_shr
+	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
+	call printf
+	add esp, 4
+	call read
+
+stack_ok_shr:
+
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -273,6 +316,19 @@ not_shift_right:
 ; check pop and print
 	cmp bl, 'p'
 	jnz not_pop
+
+	; Make sure the stack is not full.
+	mov al ,0  ; the stack size.
+	mov bl , [STACKP];
+	cmp bl ,al
+	jg stack_ok_print
+	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
+	call printf
+	add esp, 4
+	call read
+
+stack_ok_print:
+
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
@@ -296,6 +352,32 @@ not_pop:
 ; check duplicate
 	cmp bl, 'd'
 	jnz not_dup
+
+
+	; Make sure the stack is not full.
+	mov al ,0  ; the stack size.
+	mov bl , [STACKP];
+	cmp bl ,al
+	jg stack_not_empty_duplicate
+	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
+	call printf
+	add esp, 4
+	call read
+
+stack_not_empty_duplicate:
+
+	; Make sure the stack is not full.
+	mov al ,[SZ]  ; the stack size.
+	mov bl , [STACKP];
+	cmp al ,bl
+	jnz stack_ok_duplicate
+	push STACK_OVERFLOW
+	call printf
+	add esp, 4
+	call read
+
+stack_ok_duplicate:
+
 	; pop 1
 	mov eax, [BASEP]
 	mov ebx, 0
