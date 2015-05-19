@@ -1,42 +1,36 @@
 section .bss
 
+section	.rodata
+CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE:
+	DB	"Error: Not Enough Arguments on Stack" ,10 ,00
+STACK_OVERFLOW:
+	DB	"Error: Stack Overflow" , 10 ,00
+X_2_STRING:
+	DB	"%02X", 00
+X_1_STRING:
+	DB	"%X", 00
+NEWLINE:
+	DB 10, 00
+PROMPT:
+	DB "calc: ", 00
+RPN_ZERO:
+	DB	00,00,00,00,00
+RPN_ONE:
+	DB	01,00,00,00,00
+SZ: DD 20 ; 4 bytes for 5 slots
+
 section	.data
 LC0:
 	DB	"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$", 10, 0	; Format string
 LC1:
 	DB "", 10, 0
-X_STRING:
-	DB	"%x", 00
-CRASH_STRING:
-	DB	0x0d, 0x0a, "Crashing because i dont know to exit windows..." ,00
-CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE:
-	DB	0x0d, 0x0a, "Error: Not Enough Arguments on Stack" ,10 ,00
-STACK_OVERFLOW:
-	DB	0x0d, 0x0a, "Error: Stack Overflow" , 10 ,00
 
-X_2_STRING:
-	DB	"%02x", 00
-X_1_STRING:
-	DB	"%x", 00
-NEWLINE:
-	DB 10, 00
-PROMPT:
-	DB "calc: ", 00
-
-RPN_ZERO:
-	DB	00,00,00,00,00
-RPN_ONE:
-	DB	01,00,00,00,00
-
-PLUS_CARRY_FLAG:	DB	0
-PLUS_CONTINUE_FLAG:	DB	0
-I:	DD	0, 10, 0
-I_2:	DD	0, 10, 0
-IS_VALID_NUM: DD 0, 10, 0
+I:	DD	0
+I_2:	DD	0
+IS_VALID_NUM: DD 0
 LAST_STRUCT: DD 0
 BASEP: DD 0
 STACKP: DD 0
-SZ: DD 20 ; 4 bytes for 5 slots
 IS_NOT_EVEN: DD 0
 SHOULD_CHECK_LEADING_ZERO: DD 0
 
@@ -146,7 +140,7 @@ mov dword [SHOULD_CHECK_LEADING_ZERO], 0
 	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_ok_plus:
 
@@ -207,7 +201,7 @@ not_plus:
 	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_ok_shl:
 
@@ -266,7 +260,7 @@ not_shift_left:
 	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_ok_shr:
 
@@ -325,7 +319,7 @@ not_shift_right:
 	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_ok_print:
 
@@ -362,7 +356,7 @@ not_pop:
 	push CANT_PERFORM_OPERATION_BECAUSE_OF_STACK_SIZE
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_not_empty_duplicate:
 
@@ -374,7 +368,7 @@ stack_not_empty_duplicate:
 	push STACK_OVERFLOW
 	call printf
 	add esp, 4
-	call read
+	jmp read
 
 stack_ok_duplicate:
 
@@ -403,6 +397,7 @@ stack_ok_duplicate:
 
 	jmp read
 not_dup:
+
 
 ; check number of ones
 	cmp bl, 'n'
@@ -440,6 +435,25 @@ not_dup:
 	jmp read
 not_noo:
 
+	; Make sure the stack is not full.
+	push eax
+	push ebx
+	mov al ,[SZ]  ; the stack size.
+	mov bl , [STACKP];
+	cmp al ,bl
+	jnz stack_ok_number
+	pop ebx
+	pop eax
+	push STACK_OVERFLOW
+	call printf
+	add esp, 4
+	jmp read
+
+stack_ok_number:
+	pop ebx
+	pop eax
+
+
 ;check digit
 	cmp bl, '0'     ; handle 0-9
 	jl notDigit
@@ -463,6 +477,9 @@ notDigit:
 		mov byte [LC1], bl
 		jmp parseSecondByte
 notUpper:
+
+cmp byte [IS_VALID_NUM], 0
+jz read
 
 parseSecondByte:
 
@@ -558,7 +575,8 @@ parseLoopEnd:
 
 errorBadNumber:
 	; We recived a bad number
-
+	;cmp byte [IS_VALID_NUM], 0
+    jz read
 
 Quit:
 
